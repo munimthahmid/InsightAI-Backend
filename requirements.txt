@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+langchain
+openai
+pinecone
+urllib3
+requests
+httpx
+pydantic
+python-dotenv
+llama-index
+pytest
+python-multipart
+slack-sdk
+loguru
+pydantic_settings
