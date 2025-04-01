@@ -5,7 +5,7 @@ from app.api.models import (
     TemplateResponse,
     TemplatesResponse,
 )
-from app.services.research_templates import TemplateManager
+from app.services.templates.manager import TemplateManager
 
 # Initialize service
 template_manager = TemplateManager()
@@ -27,14 +27,17 @@ async def get_templates():
         # Transform to expected response format
         template_responses = []
         for template in templates:
+            # Extract section names from report_structure
+            structure = [section.section for section in template.report_structure]
+
             template_responses.append(
                 TemplateResponse(
-                    template_id=template.template_id,
+                    id=template.id,
                     name=template.name,
                     description=template.description,
-                    domain=template.domain,
-                    structure=template.structure,
-                    default_sources=template.default_sources,
+                    domain=template.tags[0] if template.tags else "general",
+                    structure=structure,  # Use the extracted section names
+                    default_sources=[],  # Set default value since it might not exist in new model
                 )
             )
 
@@ -59,13 +62,16 @@ async def get_template(
                 status_code=404, detail=f"Template with ID {template_id} not found"
             )
 
+        # Extract section names from report_structure
+        structure = [section.section for section in template.report_structure]
+
         return TemplateResponse(
-            template_id=template.template_id,
+            id=template.id,
             name=template.name,
             description=template.description,
-            domain=template.domain,
-            structure=template.structure,
-            default_sources=template.default_sources,
+            domain=template.tags[0] if template.tags else "general",
+            structure=structure,  # Use the extracted section names
+            default_sources=[],  # Set default value since it might not exist in new model
         )
     except HTTPException:
         raise

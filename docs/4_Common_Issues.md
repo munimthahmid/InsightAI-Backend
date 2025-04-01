@@ -62,6 +62,20 @@
   - Verify that documents are being properly indexed
   - Consider reindexing your vector database
 
+### "Retrieved 0 results" Issue
+
+- **Issue**: Logs show "Retrieved 0 results for query" despite documents being stored
+- **Solution**:
+  - This is typically caused by Pinecone's asynchronous nature where vectors aren't immediately queryable
+  - The system now handles this automatically with:
+    - Strategic delays between storage and querying operations
+    - Backup storage in a shared research namespace
+    - Multi-namespace querying that tries alternatives when the primary namespace fails
+  - If the issue persists, you can:
+    - Restart your research query after waiting 30+ seconds for Pinecone to fully update
+    - Check Pinecone dashboard to verify index health
+    - Review logs for any connection issues with Pinecone
+
 ### Index Creation Failures
 
 - **Issue**: Cannot create or access the vector index
