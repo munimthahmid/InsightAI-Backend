@@ -14,9 +14,9 @@ from app.api.models.research import (
     ComparisonResponse,
 )
 
-from app.api.models.slack import (
-    SlackResearchRequest,
-    SlackResearchResponse,
+from app.api.models.notification import (
+    NotificationRequest,
+    NotificationResponse,
 )
 
 __all__ = [
@@ -33,6 +33,6 @@ __all__ = [
     "TemplateResponse",
     "TemplatesResponse",
     "ComparisonResponse",
-    "SlackResearchRequest",
-    "SlackResearchResponse",
+    "NotificationRequest",
+    "NotificationResponse",
 ]
