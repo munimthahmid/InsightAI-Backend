@@ -12,6 +12,7 @@ python-dotenv
 llama-index
 pytest
 python-multipart
-slack-sdk
 loguru
 pydantic_settings
+redis
+email-validator

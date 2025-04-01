@@ -31,13 +31,13 @@ api/
 ├── models/                 # Pydantic data models
 │   ├── __init__.py
 │   ├── research.py         # Research-related models
-│   └── slack.py            # Slack integration models
+│   └── notification.py     # Notification models
 ├── routes/                 # API routes
 │   ├── __init__.py
 │   ├── advanced.py         # Advanced research features
 │   ├── history.py          # Research history management
+│   ├── notification.py     # Notification endpoints
 │   ├── research.py         # Core research functionality
-│   ├── slack.py            # Slack integration
 │   └── templates.py        # Template management
 │   └── helpers/            # Route helper functions
 └── endpoints/              # Legacy API endpoints (deprecated)
@@ -63,17 +63,34 @@ Key responsibilities:
 - Environment configuration
 - Global settings
 - Constants
+- Scalability configuration
 
 ### Services Layer (`app/services/`)
 
 ```
 services/
 ├── __init__.py
-├── data_sources.py          # Data fetching from external APIs
-├── embeddings.py            # Vector storage operations
-├── research_agent.py        # Main research business logic
-├── research_templates.py    # Template management logic
-└── slack_bot.py             # Slack integration
+├── data_sources/          # Data fetching from external APIs
+│   ├── __init__.py
+│   ├── base.py            # Abstract base class for data sources
+│   ├── manager.py         # Orchestrates data collection from all sources
+│   └── sources.py         # Implementations for specific data sources
+├── research/              # Research module
+│   ├── __init__.py        # Module initialization
+│   ├── agent.py           # Main research orchestration agent
+│   ├── history.py         # Research history management
+│   └── report.py          # Report generation functionality
+├── templates/             # Template management
+│   ├── __init__.py
+│   ├── models.py          # Template data models
+│   └── manager.py         # Template management functionality
+├── vector_db/             # Vector database operations
+│   ├── __init__.py
+│   ├── storage.py         # Vector storage functionality
+│   └── processors.py      # Document processing for vector storage
+└── notification/          # Notification delivery system
+    ├── __init__.py
+    └── service.py         # Notification service
 ```
 
 Key responsibilities:
@@ -82,6 +99,7 @@ Key responsibilities:
 - Integration with external services
 - Data processing
 - Complex operations
+- Notification handling
 
 ### Utils Layer (`app/utils/`)
 
@@ -98,51 +116,86 @@ Key responsibilities:
 
 ## Key Components
 
-### ResearchAgent (`app/services/research_agent.py`)
+### Research Module (`app/services/research/`)
 
-The central component that orchestrates the research process:
+The central components for managing the research process:
 
-- Manages the research workflow
+#### ResearchAgent (`app/services/research/agent.py`)
+
+- Orchestrates the entire research workflow
 - Coordinates data collection from multiple sources
 - Processes and stores data in vector database
-- Generates research reports
-- Handles research history and persistence
+- Generates research reports using templates
+- Handles focused report generation and literature reviews
+- Manages research status tracking
 
-### DataSources (`app/services/data_sources.py`)
+#### ResearchHistoryManager (`app/services/research/history.py`)
+
+- Saves research results to persistent storage
+- Retrieves past research sessions
+- Manages deletion and searching of research history
+- Handles research metadata
+
+#### ReportGenerator (`app/services/research/report.py`)
+
+- Generates comprehensive research reports from retrieved documents
+- Supports template-based report generation
+- Enhances reports with properly formatted citations
+- Generates formal literature reviews with academic formatting
+
+### DataSources (`app/services/data_sources/`)
 
 Responsible for fetching data from external APIs:
 
-- ArXiv API for academic papers
-- News API for news articles
-- GitHub API for repositories
-- Wikipedia API for general information
+- Abstract base class for consistent source implementations
+- DataSourceManager to coordinate all data sources
+- Implementations for:
+  - ArXiv API for academic papers
+  - News API for news articles
+  - GitHub API for repositories
+  - Wikipedia API for general information
+  - Semantic Scholar for academic research
 - Error handling for API interactions
 
-### VectorStorage (`app/services/embeddings.py`)
+### VectorStorage (`app/services/vector_db/`)
 
 Manages the vector database operations:
 
 - Converts text to vector embeddings
 - Stores and retrieves data from Pinecone
 - Performs semantic search
-- Manages namespaces for research sessions
+- Document processors for handling different source types
 
-### TemplateManager (`app/services/research_templates.py`)
+### TemplateManager (`app/services/templates/`)
 
 Handles research templates:
 
+- Pydantic models for template structure
 - Loads and saves templates
 - Provides domain-specific templates
 - Manages template retrieval and application
+- Default templates for common research scenarios
+
+### NotificationService (`app/services/notification/`)
+
+Handles notifications about research results:
+
+- Abstract provider interface for extensibility
+- Email notification support
+- Console notification for development
+- Pluggable architecture for new providers
 
 ## Data Flow
 
 1. **API Request**: User submits a research query via the API
-2. **Data Collection**: ResearchAgent uses DataSources to fetch relevant information
-3. **Vector Processing**: Data is processed and stored in VectorStorage
-4. **Query**: Vector database is queried for relevant documents
-5. **Report Generation**: LLM generates a comprehensive report
-6. **Response**: Formatted response returned to the client
+2. **Data Collection**: ResearchAgent uses DataSourceManager to fetch relevant information from multiple sources
+3. **Document Processing**: Data is processed by DocumentProcessor for optimal chunking and metadata extraction
+4. **Vector Storage**: Processed documents are stored in VectorStorage
+5. **Semantic Search**: Vector database is queried for the most relevant documents
+6. **Report Generation**: ReportGenerator uses the retrieved documents to create a comprehensive report
+7. **Citations Enhancement**: Reports are enhanced with proper citations linking to source documents
+8. **Research History**: Results are saved to history for future reference
+9. **Response/Notification**: Formatted response returned to the client and/or sent as notification
 
 ## Design Patterns
 
@@ -153,6 +206,8 @@ The codebase utilizes several design patterns:
 - **Dependency Injection**: Services and configurations passed as dependencies
 - **Factory Pattern**: Creation of complex objects like templates
 - **Facade Pattern**: Simplified interfaces to complex subsystems
+- **Strategy Pattern**: Interchangeable notification providers
+- **Adapter Pattern**: Common interface for different notification methods
 
 ## Modular Design Principles
 
@@ -171,6 +226,8 @@ The backend utilizes FastAPI's asynchronous capabilities:
 - Concurrent data fetching from multiple sources
 - Non-blocking I/O operations
 - Efficient handling of multiple requests
+- Background task processing for notifications
+- Async workflow for research process
 
 ## Error Handling
 
@@ -180,3 +237,14 @@ A robust error handling strategy includes:
 - Graceful degradation when services are unavailable
 - Specific error responses with actionable information
 - Fallback mechanisms for service failures
+- Status tracking of ongoing research
+
+## Scalability Features
+
+The system is designed with scalability in mind:
+
+- Worker concurrency configuration
+- Request timeout management
+- Caching mechanism for improved performance
+- Rate limiting for API stability
+- Configurable notification system

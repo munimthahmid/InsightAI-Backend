@@ -7,8 +7,8 @@ from app.api.models import (
     ResearchResponse,
     ResearchTemplateRequest,
 )
-from app.services.research_agent import ResearchAgent
-from app.services.research_templates import TemplateManager
+from app.services.research.agent import ResearchAgent
+from app.services.templates.manager import TemplateManager
 
 # Initialize services
 research_agent = ResearchAgent()
@@ -32,10 +32,9 @@ async def conduct_research(request: ResearchRequest):
         logger.info(f"Conducting research on topic: {request.query}")
 
         # Conduct research
-        result = await research_agent.research_topic(
+        result = await research_agent.conduct_research(
             query=request.query,
             max_results_per_source=request.max_results_per_source,
-            save_history=request.save_history,
         )
 
         logger.info(f"Research completed for topic: {request.query}")
@@ -66,11 +65,10 @@ async def conduct_templated_research(request: ResearchTemplateRequest):
         )
 
         # Conduct research with template
-        result = await research_agent.research_topic_with_template(
+        result = await research_agent.conduct_research(
             query=request.query,
-            template=template,
+            template_id=request.template_id,
             max_results_per_source=request.max_results_per_source,
-            save_history=request.save_history,
         )
 
         logger.info(
