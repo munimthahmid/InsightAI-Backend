@@ -1,0 +1,137 @@
+[
+  {
+    "id": "cfd2dc89-4b03-4bfe-a182-f6184853e9d1",
+    "name": "Standard Research Report",
+    "description": "A comprehensive general-purpose research report template",
+    "prompt_template": "You are researching the topic: {query}. Create a comprehensive research report that analyzes the provided information.",
+    "report_structure": [
+      {
+        "section": "Introduction",
+        "description": "Overview of the topic and research questions",
+        "required": true
+      },
+      {
+        "section": "Methodology",
+        "description": "Approach used for the research",
+        "required": true
+      },
+      {
+        "section": "Findings",
+        "description": "Main results of the research",
+        "required": true
+      },
+      {
+        "section": "Analysis",
+        "description": "Interpretation of the findings",
+        "required": true
+      },
+      {
+        "section": "Conclusion",
+        "description": "Summary of key points and recommendations",
+        "required": true
+      }
+    ],
+    "created_at": "2025-04-01T10:56:20.099076",
+    "updated_at": null,
+    "created_by": null,
+    "is_default": true,
+    "tags": [
+      "general",
+      "standard"
+    ]
+  },
+  {
+    "id": "c3315e91-f2f3-43e6-982b-6a7040e58e5f",
+    "name": "Technical Deep Dive",
+    "description": "A technical analysis focused on implementation details",
+    "prompt_template": "You are a technical expert analyzing: {query}. Create a detailed technical report examining implementation, architecture, and technical considerations of this topic.",
+    "report_structure": [
+      {
+        "section": "Technical Overview",
+        "description": "High-level technical description",
+        "required": true
+      },
+      {
+        "section": "Architecture",
+        "description": "System architecture and components",
+        "required": true
+      },
+      {
+        "section": "Implementation Details",
+        "description": "Specific implementation approaches",
+        "required": true
+      },
+      {
+        "section": "Performance Considerations",
+        "description": "Analysis of performance aspects",
+        "required": true
+      },
+      {
+        "section": "Trade-offs",
+        "description": "Technical trade-offs and design decisions",
+        "required": true
+      },
+      {
+        "section": "Future Directions",
+        "description": "Potential technical improvements and research",
+        "required": true
+      }
+    ],
+    "created_at": "2025-04-01T10:56:20.099076",
+    "updated_at": null,
+    "created_by": null,
+    "is_default": true,
+    "tags": [
+      "technical",
+      "implementation",
+      "deep-dive"
+    ]
+  },
+  {
+    "id": "6f030197-22f8-4d69-9cf0-121c381a92bf",
+    "name": "Trend Analysis",
+    "description": "Analysis of current trends and future directions",
+    "prompt_template": "You are analyzing trends related to: {query}. Create a report that identifies current trends, historical context, and makes predictions about future developments.",
+    "report_structure": [
+      {
+        "section": "Executive Summary",
+        "description": "Brief overview of key trends",
+        "required": true
+      },
+      {
+        "section": "Historical Context",
+        "description": "How the trend has evolved over time",
+        "required": true
+      },
+      {
+        "section": "Current Landscape",
+        "description": "Analysis of present state",
+        "required": true
+      },
+      {
+        "section": "Key Players",
+        "description": "Important organizations and individuals",
+        "required": true
+      },
+      {
+        "section": "Future Projections",
+        "description": "Predictions for future developments",
+        "required": true
+      },
+      {
+        "section": "Strategic Implications",
+        "description": "What these trends mean for stakeholders",
+        "required": true
+      }
+    ],
+    "created_at": "2025-04-01T10:56:20.099076",
+    "updated_at": null,
+    "created_by": null,
+    "is_default": true,
+    "tags": [
+      "trends",
+      "forecasting",
+      "analysis"
+    ]
+  }
+]
