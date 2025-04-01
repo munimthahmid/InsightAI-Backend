@@ -58,12 +58,14 @@ The core research module provides comprehensive functionality:
 
 The system is designed with scalability and performance in mind:
 
+- **Parallel Agent Processing**: Multiple agents working concurrently on different aspects of research
 - **Worker Concurrency**: Configurable parallel processing capabilities
 - **Caching System**: Efficient caching for improved response times
 - **Rate Limiting**: Protection against API overloads
 - **Notification System**: Flexible notification delivery for completed research
 - **Modular Components**: Easily replaceable and upgradable service components
 - **Asynchronous Processing**: Non-blocking operations for efficient resource usage
+- **Task Dependency Graphs**: Optimized execution of interdependent research tasks
 
 ## Technical Foundation
 
