@@ -44,6 +44,10 @@ class TemplateManager:
 
                 # Convert to ResearchTemplate objects
                 for template_dict in templates_data:
+                    # Map template_id to id if it exists
+                    if "template_id" in template_dict:
+                        template_dict["id"] = template_dict["template_id"]
+
                     # Convert report structure to TemplateSectionSchema objects
                     if "report_structure" in template_dict:
                         template_dict["report_structure"] = [
@@ -68,6 +72,9 @@ class TemplateManager:
                     # Create template object
                     template = ResearchTemplate(**template_dict)
                     self.templates[template.id] = template
+                    logger.info(
+                        f"Loaded template: {template.name} with ID: {template.id}"
+                    )
 
                 logger.info(f"Loaded {len(self.templates)} templates")
             else:
@@ -266,7 +273,47 @@ class TemplateManager:
         Returns:
             Template if found, None otherwise
         """
-        return self.templates.get(template_id)
+        logger.info(f"Looking for template with ID: {template_id}")
+
+        # Direct lookup by ID
+        result = self.templates.get(template_id)
+        if result:
+            logger.info(
+                f"Found template directly by ID: {template_id} -> {result.name}"
+            )
+            return result
+
+        # If not found directly, try to find by template_id attribute
+        for t_id, template in self.templates.items():
+            logger.info(f"Checking template {t_id}: {template.name}")
+
+            if hasattr(template, "template_id") and template.template_id == template_id:
+                logger.info(
+                    f"Found template by template_id attribute: {template_id} -> {template.name}"
+                )
+                return template
+
+        # Last resort - check if any template has matching ID in any form
+        for t_id, template in self.templates.items():
+            # Check if template_id matches t_id without case sensitivity
+            if t_id.lower() == template_id.lower():
+                logger.info(
+                    f"Found template by case-insensitive ID: {template_id} -> {template.name}"
+                )
+                return template
+
+            # Check if template_id is contained in the template name
+            if template_id.lower() in template.name.lower():
+                logger.info(
+                    f"Found template by name match: {template_id} -> {template.name}"
+                )
+                return template
+
+        logger.error(f"Template not found with ID: {template_id}")
+        logger.info(
+            f"Available templates: {[t.name + ' (' + t.id + ')' for t in self.templates.values()]}"
+        )
+        return None
 
     def get_default_template(self) -> Optional[ResearchTemplate]:
         """

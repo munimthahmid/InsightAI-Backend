@@ -16,3 +16,4 @@ loguru
 pydantic_settings
 redis
 email-validator
+scikit-learn
