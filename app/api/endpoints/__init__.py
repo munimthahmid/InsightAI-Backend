@@ -4,7 +4,7 @@ from app.api.routes import (
     history_router,
     advanced_router,
     templates_router,
-    slack_router,
+    notification_router,
 )
 
 # Create main router
@@ -19,4 +19,4 @@ api_router.include_router(
     advanced_router, prefix="/research/advanced", tags=["Advanced Research"]
 )
 api_router.include_router(templates_router, prefix="/templates", tags=["Templates"])
-api_router.include_router(slack_router, prefix="/slack", tags=["Slack Integration"])
+api_router.include_router(notification_router, prefix="/notify", tags=["Notifications"])

@@ -12,7 +12,7 @@ from datetime import datetime
 import math
 
 from app.core.config import settings
-from app.services.data_sources import DataSources
+from app.services.data_sources.manager import DataSourceManager
 from app.services.embeddings import VectorStorage
 from app.services.research_templates import TemplateManager, ResearchTemplate
 
@@ -30,7 +30,7 @@ class ResearchAgent:
         )
 
         # Initialize data sources and vector storage
-        self.data_sources = DataSources()
+        self.data_sources = DataSourceManager()
         self.vector_storage = VectorStorage()
 
         # Initialize storage for research history
@@ -217,7 +217,7 @@ class ResearchAgent:
         # News API sometimes works better with fewer, more focused terms
         news_query = " ".join(basic_query.split()[:2])
 
-        async with DataSources() as sources:
+        async with DataSourceManager() as sources:
             # First try the original query for all sources
             logger.info(f"Fetching data with primary query: '{cleaned_query}'")
             data = await sources.fetch_all_sources(
@@ -1352,7 +1352,7 @@ class ResearchAgent:
         # Use the template's default sources if specified
         sources_to_use = template.default_sources
 
-        async with DataSources() as sources:
+        async with DataSourceManager() as sources:
             logger.info(f"Fetching data from sources: {', '.join(sources_to_use)}")
             # Modify to only fetch from specified sources
             data = {}
