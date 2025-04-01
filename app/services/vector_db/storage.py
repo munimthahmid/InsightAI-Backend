@@ -1,5 +1,6 @@
 """
 Vector database storage for embedding and retrieving research data.
+This file serves as the main interface for vector database operations.
 """
 
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -16,6 +17,8 @@ import os
 import random
 
 from app.core.config import settings
+from app.services.vector_db.document_preparation import DocumentPreparation
+from app.services.vector_db.vector_operations import VectorOperations
 
 
 # Define a simple MockVectorStorage for local testing when Pinecone fails
@@ -94,6 +97,7 @@ class VectorStorage:
     def __init__(self):
         """Initialize the vector storage with OpenAI embeddings and Pinecone."""
         self.use_mock = False
+        self.document_preparation = DocumentPreparation()
 
         # Use a model compatible with the existing Pinecone index dimensions (1536)
         try:
@@ -165,6 +169,13 @@ class VectorStorage:
                 # Connect to the index
                 self.index = self.pc.Index(settings.INDEX_NAME)
 
+                # Initialize vector operations with our components
+                self.vector_operations = VectorOperations(
+                    embeddings=self.embeddings,
+                    index=self.index,
+                    document_preparation=self.document_preparation,
+                )
+
                 # Verify the index is working by checking stats
                 try:
                     stats = self.index.describe_index_stats()
@@ -186,14 +197,20 @@ class VectorStorage:
                 except Exception as stats_err:
                     logger.error(f"Error getting index stats: {str(stats_err)}")
                     self.initialized = False
+                    self.mock_storage = MockVectorStorage()
+                    self.use_mock = True
             except Exception as index_err:
                 logger.error(
                     f"Error accessing or creating Pinecone index: {str(index_err)}"
                 )
                 self.initialized = False
+                self.mock_storage = MockVectorStorage()
+                self.use_mock = True
         except Exception as e:
             logger.error(f"Error initializing vector storage: {str(e)}")
             self.initialized = False
+            self.mock_storage = MockVectorStorage()
+            self.use_mock = True
 
     def _check_initialized(self):
         """Check if the vector storage is initialized."""
@@ -202,206 +219,50 @@ class VectorStorage:
                 "Vector storage not initialized. Check Pinecone API key and environment."
             )
 
-    def _clean_metadata_for_pinecone(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Clean metadata to ensure it's compatible with Pinecone.
-
-        Args:
-            metadata: The metadata to clean
-
-        Returns:
-            Cleaned metadata
-        """
-        # Clean up the metadata by removing values that might cause issues with Pinecone
-        cleaned = {}
-        for k, v in metadata.items():
-            # Skip complex nested objects that aren't needed for search (e.g., owner details)
-            if isinstance(v, dict) or isinstance(v, list):
-                continue
-
-            # Convert all values to strings for consistency
-            if v is not None:
-                cleaned[k] = str(v)
-
-        return cleaned
-
     def process_and_store(
         self,
-        documents: List[Document],
+        documents: List[Dict[str, Any]],
         source_type: str,
         namespace: Optional[str] = None,
     ) -> int:
         """
-        Process and store documents in the vector database.
+        Process data and store embeddings in Pinecone.
 
         Args:
-            documents: List of Document objects to process and store
-            source_type: Type of source for metadata
-            namespace: Optional namespace for grouping related vectors
+            documents: List of document data
+            source_type: Type of source
+            namespace: Optional namespace for the vectors
 
         Returns:
-            Number of documents processed
+            Number of chunks stored in the vector database
         """
-        # If using mock storage, delegate to it
         if self.use_mock:
             return self.mock_storage.process_and_store(
                 documents, source_type, namespace
             )
 
-        self._check_initialized()
-
-        # Ensure we have a valid namespace
-        namespace = namespace or ""
-
-        if not documents:
-            logger.warning("No documents provided to process_and_store")
-            return 0
-
-        logger.info(f"Generating embeddings for {len(documents)} documents")
-
-        # Pre-emptively ensure the namespace exists
-        if namespace:
-            namespace_success = self._ensure_namespace_exists(namespace)
-            if not namespace_success:
-                logger.warning(
-                    f"Could not ensure namespace '{namespace}' exists. Will attempt to create it during vector upsert."
-                )
-
-        # Generate IDs and embeddings
-        ids = []
-        embeddings = []
-        metadatas = []
-
-        # Batch processing to avoid overwhelming the API
-        batch_size = 100
-        processed_count = 0
-
-        for i in range(0, len(documents), batch_size):
-            batch = documents[i : i + batch_size]
-
-            # Generate embeddings for content
-            texts = [doc.page_content for doc in batch]
-            try:
-                batch_embeddings = self.embeddings.embed_documents(texts)
-                embeddings.extend(batch_embeddings)
-
-                # Generate IDs and clean metadata
-                for j, doc in enumerate(batch):
-                    doc_id = str(uuid.uuid4())
-                    ids.append(doc_id)
-
-                    # Clean metadata for Pinecone
-                    metadata = self._clean_metadata_for_pinecone(doc.metadata)
-                    metadata["source_type"] = source_type
-                    metadata["text"] = doc.page_content[
-                        :1000
-                    ]  # Store truncated text for retrieval
-                    metadatas.append(metadata)
-
-                processed_count += len(batch)
-                logger.info(f"Successfully generated {len(batch)} embeddings")
-            except Exception as e:
-                logger.error(f"Error generating embeddings for batch: {str(e)}")
-                # Continue with next batch
-
-        if not embeddings:
-            logger.error("Failed to generate any embeddings")
-            return 0
-
-        # Store vectors in batches
-        upsert_batch_size = 100
-        vectors_stored = 0
-
-        # Get initial stats for verification
-        try:
-            before_stats = self.index.describe_index_stats()
-            logger.info(f"Index stats before upsert: {before_stats}")
-        except Exception as e:
-            logger.warning(f"Could not get index stats before upsert: {str(e)}")
-            before_stats = {"total_vector_count": 0, "namespaces": {}}
-
-        # Process in batches
-        for i in range(0, len(ids), upsert_batch_size):
-            end_idx = min(i + upsert_batch_size, len(ids))
-            batch_ids = ids[i:end_idx]
-            batch_embeddings = embeddings[i:end_idx]
-            batch_metadatas = metadatas[i:end_idx]
-
-            # Prepare vectors for upsert
-            batch = []
-            for j in range(len(batch_ids)):
-                batch.append(
-                    {
-                        "id": batch_ids[j],
-                        "values": batch_embeddings[j],
-                        "metadata": batch_metadatas[j],
-                    }
-                )
-
-            # Upsert to Pinecone
-            try:
-                logger.info(
-                    f"Upserting {len(batch)} vectors to namespace '{namespace}'"
-                )
-                self.index.upsert(
-                    vectors=batch,
-                    namespace=namespace,
-                )
-                vectors_stored += len(batch)
-                logger.info(
-                    f"Successfully stored batch {i//upsert_batch_size + 1} ({len(batch)} vectors)"
-                )
-            except Exception as e:
-                logger.error(f"Error upserting batch to Pinecone: {str(e)}")
-
-        # Verify the upsert by checking index stats
-        try:
-            # Allow a delay for Pinecone to process
-            logger.info("Waiting for Pinecone to update index stats...")
-            time.sleep(3)
-
-            after_stats = self.index.describe_index_stats()
-
-            # Check if the namespace exists in the index stats
-            namespaces = after_stats.get("namespaces", {})
-
-            if namespace in namespaces:
-                logger.info(
-                    f"Verification successful: Namespace '{namespace}' found with {namespaces[namespace].get('vector_count', 0)} vectors"
-                )
+        # Prepare documents if they aren't already Document objects
+        prepared_docs = []
+        for doc in documents:
+            if isinstance(doc, Document):
+                prepared_docs.append(doc)
             else:
-                # Namespace still not visible, but vectors might have been added
-                namespace_list = list(namespaces.keys())
-                logger.warning(
-                    f"Verification partial: Namespace '{namespace}' not visible in index stats. Available namespaces: {namespace_list}"
-                )
-
-                # Check if total vectors increased
-                before_count = before_stats.get("total_vector_count", 0)
-                after_count = after_stats.get("total_vector_count", 0)
-
-                if after_count > before_count:
-                    logger.info(
-                        f"Total vector count increased from {before_count} to {after_count}, vectors were likely added"
-                    )
-                else:
-                    logger.warning(
-                        "No increase in total vector count, vectors may not have been added correctly"
+                # If it's a dict with page_content and metadata
+                if (
+                    isinstance(doc, dict)
+                    and "page_content" in doc
+                    and "metadata" in doc
+                ):
+                    prepared_docs.append(
+                        Document(
+                            page_content=doc["page_content"], metadata=doc["metadata"]
+                        )
                     )
 
-                # One last attempt to ensure namespace exists
-                if namespace:
-                    logger.info(
-                        f"Making final attempt to ensure namespace '{namespace}' is registered..."
-                    )
-                    self._ensure_namespace_exists(namespace, max_retries=1)
-        except Exception as e:
-            logger.warning(f"Error verifying upsert: {str(e)}")
-
-        logger.info(
-            f"Completed storing {vectors_stored}/{len(ids)} vectors from {source_type}"
+        # Use vector operations to process and store
+        return self.vector_operations.process_and_store(
+            documents=prepared_docs, source_type=source_type, namespace=namespace
         )
-        return vectors_stored
 
     def query(
         self,
@@ -412,289 +273,44 @@ class VectorStorage:
         source_types: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
-        Query the vector database for similar documents.
+        Query the vector store with advanced filtering options.
 
         Args:
-            query_text: Text to search for
-            top_k: Number of results to return
-            namespace: Namespace to search in
-            filter_dict: Optional filter for metadata
+            query_text: The query text
+            top_k: Number of top results to return
+            namespace: Optional namespace for the query
+            filter_dict: Optional filter for the query
             source_types: Optional list of source types to filter by
 
         Returns:
-            Dictionary with matches
+            Query results from Pinecone
         """
-        # If using mock storage, delegate to it
         if self.use_mock:
             return self.mock_storage.query(
                 query_text, top_k, namespace, filter_dict, source_types
             )
 
-        self._check_initialized()
-
-        # Use default namespace if not provided
-        namespace = namespace or ""
-
-        logger.info(
-            f"Querying vector store with: text='{query_text[:30]}...', top_k={top_k}, namespace='{namespace}'"
+        # Use vector operations to query
+        return self.vector_operations.query(
+            query_text=query_text,
+            top_k=top_k,
+            namespace=namespace,
+            filter_dict=filter_dict,
+            source_types=source_types,
         )
-
-        # First ensure the namespace exists before querying
-        namespace_verified = False
-        if namespace:
-            namespace_exists = self._ensure_namespace_exists(namespace, max_retries=2)
-            if namespace_exists:
-                namespace_verified = True
-                logger.info(f"Verified namespace '{namespace}' exists")
-            else:
-                logger.warning(
-                    f"Namespace '{namespace}' could not be verified to exist, but will attempt query anyway"
-                )
-
-        # Create embedding for query text
-        query_embedding = self.embeddings.embed_query(query_text)
-
-        # Apply source_type filter if provided
-        filter_conditions = {}
-        if filter_dict:
-            filter_conditions.update(filter_dict)
-        if source_types:
-            filter_conditions["source_type"] = {"$in": source_types}
-
-        # Execute the query with retry logic
-        max_retries = 2
-        retry_count = 0
-        query_results = {"matches": []}
-
-        while retry_count <= max_retries:
-            try:
-                results = self.index.query(
-                    vector=query_embedding,
-                    top_k=top_k,
-                    namespace=namespace,
-                    filter=filter_conditions if filter_conditions else None,
-                    include_metadata=True,
-                )
-
-                # Process and log results
-                matches = results.get("matches", [])
-                match_count = len(matches)
-
-                if match_count > 0:
-                    logger.info(
-                        f"Query returned {match_count} matches in namespace '{namespace}'"
-                    )
-                    query_results = results
-                    break  # Success, exit the retry loop
-                else:
-                    logger.warning(
-                        f"Attempt {retry_count+1}: No matches found for query in namespace '{namespace}'"
-                    )
-
-                    # Check if we should retry
-                    if retry_count < max_retries:
-                        # Get index stats for debugging
-                        try:
-                            stats = self.index.describe_index_stats()
-                            logger.info(f"Index stats: {stats}")
-
-                            # Namespace not found in stats but we should retry
-                            if namespace and namespace not in stats.get(
-                                "namespaces", {}
-                            ):
-                                logger.warning(
-                                    f"Namespace '{namespace}' not found in index stats, will retry query"
-                                )
-                                # Wait before retry with exponential backoff
-                                wait_time = 2**retry_count
-                                logger.info(
-                                    f"Waiting {wait_time} seconds before retry..."
-                                )
-                                time.sleep(wait_time)
-                                retry_count += 1
-                                continue
-                        except Exception as stats_err:
-                            logger.error(
-                                f"Error fetching index stats: {str(stats_err)}"
-                            )
-
-                    # No more retries or namespace exists but no matches
-                    query_results = results
-                    break
-
-            except Exception as e:
-                logger.error(
-                    f"Error querying vector store (attempt {retry_count+1}): {str(e)}"
-                )
-
-                # Check if we should retry
-                if retry_count < max_retries:
-                    wait_time = 2**retry_count
-                    logger.info(f"Waiting {wait_time} seconds before retry...")
-                    time.sleep(wait_time)
-                    retry_count += 1
-                else:
-                    break
-
-        # If we still got no results, do a final check on index stats
-        if not query_results.get("matches", []):
-            try:
-                stats = self.index.describe_index_stats()
-                total_vectors = stats.get("total_vector_count", 0)
-                namespaces = stats.get("namespaces", {})
-
-                if namespace and namespace in namespaces:
-                    ns_vectors = namespaces[namespace].get("vector_count", 0)
-                    logger.info(
-                        f"Namespace '{namespace}' exists with {ns_vectors} vectors, but no matches found"
-                    )
-                else:
-                    logger.warning(
-                        f"Final check: Namespace '{namespace}' not found in index stats"
-                    )
-                    if namespaces:
-                        all_ns = list(namespaces.keys())
-                        logger.info(f"Available namespaces: {all_ns}")
-
-                        # If we can't find our namespace but vectors were stored, try querying without namespace
-                        if len(all_ns) > 0 and not namespace_verified:
-                            logger.warning(
-                                f"Trying fallback query without namespace specification"
-                            )
-                            try:
-                                fallback_results = self.index.query(
-                                    vector=query_embedding,
-                                    top_k=top_k,
-                                    namespace="",  # Try empty namespace as fallback
-                                    filter=(
-                                        filter_conditions if filter_conditions else None
-                                    ),
-                                    include_metadata=True,
-                                )
-
-                                fallback_matches = fallback_results.get("matches", [])
-                                if fallback_matches:
-                                    logger.info(
-                                        f"Fallback query returned {len(fallback_matches)} matches"
-                                    )
-                                    query_results = fallback_results
-                            except Exception as fallback_err:
-                                logger.error(
-                                    f"Error during fallback query: {str(fallback_err)}"
-                                )
-            except Exception as e:
-                logger.error(f"Error during final stats check: {str(e)}")
-
-        return query_results
 
     def delete_namespace(self, namespace: str) -> bool:
         """
-        Delete all vectors in a namespace.
+        Delete a namespace from Pinecone.
 
         Args:
-            namespace: The namespace to delete
+            namespace: Namespace to delete
 
         Returns:
             True if successful, False otherwise
         """
-        self._check_initialized()
+        if self.use_mock:
+            return self.mock_storage.delete_namespace(namespace)
 
-        try:
-            self.index.delete(delete_all=True, namespace=namespace)
-            logger.info(f"Deleted all vectors in namespace: {namespace}")
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting namespace {namespace}: {str(e)}")
-            return False
-
-    def _ensure_namespace_exists(self, namespace: str, max_retries: int = 3) -> bool:
-        """
-        Ensure a namespace exists in Pinecone by creating a small test vector if needed.
-
-        Args:
-            namespace: The namespace to verify/create
-            max_retries: Maximum number of retry attempts
-
-        Returns:
-            bool: True if namespace exists or was created, False if failed
-        """
-        if not namespace:
-            logger.warning("Empty namespace provided to _ensure_namespace_exists")
-            return False
-
-        # First check if namespace already exists
-        try:
-            stats = self.index.describe_index_stats()
-            namespaces = stats.get("namespaces", {})
-
-            if namespace in namespaces:
-                logger.info(
-                    f"Namespace '{namespace}' already exists with {namespaces[namespace].get('vector_count', 0)} vectors"
-                )
-                return True
-        except Exception as e:
-            logger.warning(f"Error checking namespace existence: {str(e)}")
-            # Continue with creation attempt
-
-        # Namespace doesn't exist or couldn't be verified, try to create it with a minimal vector
-        retry_delay = 1  # seconds
-
-        for retry in range(max_retries):
-            try:
-                logger.info(
-                    f"Attempt {retry+1}: Creating namespace '{namespace}' with test vector..."
-                )
-
-                # Create a test vector with some non-zero values (Pinecone requires at least one non-zero value)
-                # Initialize with small random values instead of zeros
-                test_values = [0.001] * settings.DIMENSION
-                # Add some variation to ensure uniqueness
-                for i in range(10):
-                    random_idx = random.randint(0, settings.DIMENSION - 1)
-                    test_values[random_idx] = 0.1 + (
-                        random.random() * 0.9
-                    )  # Random value between 0.1 and 1.0
-
-                test_vector = {
-                    "id": f"ns-init-{namespace}",
-                    "values": test_values,
-                    "metadata": {
-                        "namespace_init": True,
-                        "created_at": time.time(),
-                        "source_type": "system",
-                    },
-                }
-
-                # Upsert test vector to initialize namespace
-                self.index.upsert(vectors=[test_vector], namespace=namespace)
-
-                # Wait for namespace to be reflected in stats
-                logger.info(
-                    f"Waiting {retry_delay} seconds for namespace to be registered..."
-                )
-                time.sleep(retry_delay)
-
-                # Verify namespace now exists
-                stats = self.index.describe_index_stats()
-                if namespace in stats.get("namespaces", {}):
-                    logger.info(
-                        f"Successfully created and verified namespace '{namespace}'"
-                    )
-                    return True
-
-                logger.warning(
-                    f"Namespace '{namespace}' still not found after creation attempt {retry+1}"
-                )
-                retry_delay *= 2  # Exponential backoff
-
-            except Exception as e:
-                logger.warning(
-                    f"Error creating namespace '{namespace}' (attempt {retry+1}): {str(e)}"
-                )
-                time.sleep(retry_delay)
-                retry_delay *= 2
-
-        logger.error(
-            f"Failed to ensure namespace '{namespace}' exists after {max_retries} attempts"
-        )
-        return False
+        # Use vector operations to delete namespace
+        return self.vector_operations.delete_namespace(namespace)

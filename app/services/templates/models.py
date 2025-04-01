@@ -25,6 +25,9 @@ class ResearchTemplate(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    template_id: Optional[str] = (
+        None  # Adding template_id for compatibility with older templates
+    )
     name: str
     description: str
     prompt_template: str = Field(
@@ -38,6 +41,10 @@ class ResearchTemplate(BaseModel):
     created_by: Optional[str] = None
     is_default: bool = False
     tags: List[str] = Field(default_factory=list)
+    domain: Optional[str] = None  # Adding domain for compatibility with older templates
+    default_sources: List[str] = Field(
+        default_factory=list
+    )  # Adding default_sources for compatibility
 
     @validator("report_structure")
     def validate_structure(cls, v):
