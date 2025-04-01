@@ -1,91 +1,21 @@
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+"""
+Document preparation functionality for vector database storage.
+Handles conversion of data from different sources into document objects.
+"""
+
 from langchain.docstore.document import Document
-from pinecone import Pinecone, ServerlessSpec
-import requests.exceptions
-import urllib3.exceptions
-from typing import List, Dict, Any, Optional, Tuple, Union
-import uuid
-import time
+from typing import List, Dict, Any, Tuple
 from loguru import logger
 
-from app.core.config import settings
 
-
-class VectorStorage:
-    """Handles vector embeddings and storage with Pinecone."""
+class DocumentPreparation:
+    """Prepares documents for embedding and vector storage."""
 
     def __init__(self):
-        """Initialize the vector storage with OpenAI embeddings and Pinecone."""
-        # Use a model compatible with the existing Pinecone index dimensions (1536)
-        self.embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.OPENAI_API_KEY,
-            model="text-embedding-ada-002",  # Use model with 1536 dimensions to match existing index
-        )
+        """Initialize the document preparation service."""
+        pass
 
-        # Initialize Pinecone
-        if not (settings.PINECONE_API_KEY and settings.PINECONE_ENVIRONMENT):
-            logger.warning(
-                "Pinecone API key or environment not provided, vector storage will not work"
-            )
-            self.initialized = False
-            return
-
-        try:
-            # Initialize Pinecone client with the new API
-            self.pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-
-            try:
-                # List existing indexes
-                indexes = self.pc.list_indexes()
-                index_names = [index.name for index in indexes]
-
-                # Create index if it doesn't exist
-                if settings.INDEX_NAME not in index_names:
-                    logger.info(f"Creating Pinecone index: {settings.INDEX_NAME}")
-
-                    # Create a ServerlessSpec using settings
-                    spec = ServerlessSpec(
-                        cloud=settings.INDEX_SPEC["cloud"],
-                        region=settings.INDEX_SPEC["region"],
-                    )
-
-                    self.pc.create_index(
-                        name=settings.INDEX_NAME,
-                        dimension=settings.DIMENSION,
-                        metric="cosine",
-                        spec=spec,
-                    )
-                    # Wait for index to be ready
-                    time.sleep(1)
-
-                self.index = self.pc.Index(settings.INDEX_NAME)
-                self.initialized = True
-                logger.info("Vector storage initialized successfully")
-            except (
-                requests.exceptions.ConnectionError,
-                urllib3.exceptions.NewConnectionError,
-            ) as conn_err:
-                logger.error(f"Connection error to Pinecone: {str(conn_err)}")
-                logger.error(
-                    "Please check your internet connection or Pinecone service status"
-                )
-                self.initialized = False
-            except Exception as e:
-                logger.error(f"Error accessing Pinecone indexes: {str(e)}")
-                self.initialized = False
-        except Exception as e:
-            logger.error(f"Error initializing vector storage: {str(e)}")
-            self.initialized = False
-
-    def _check_initialized(self):
-        """Check if the vector storage is initialized."""
-        if not self.initialized:
-            raise ValueError(
-                "Vector storage not initialized. Check Pinecone API key and environment."
-            )
-
-    def _prepare_documents(
+    def prepare_documents(
         self, data: List[Dict[str, Any]], source_type: str
     ) -> List[Document]:
         """
@@ -263,7 +193,7 @@ class VectorStorage:
 
         return documents
 
-    def _get_optimal_chunk_settings(self, source_type: str) -> Tuple[int, int]:
+    def get_optimal_chunk_settings(self, source_type: str) -> Tuple[int, int]:
         """
         Get optimal chunking settings based on source type for better retrieval.
 
@@ -290,84 +220,7 @@ class VectorStorage:
             # Default settings
             return 1000, 200
 
-    def process_and_store(
-        self,
-        data: List[Dict[str, Any]],
-        source_type: str,
-        namespace: Optional[str] = None,
-    ) -> int:
-        """
-        Process data and store embeddings in Pinecone.
-
-        Args:
-            data: List of data from API
-            source_type: Type of source (arxiv, news, github, wikipedia, semantic_scholar)
-            namespace: Optional namespace for the vectors
-
-        Returns:
-            Number of chunks stored in the vector database
-        """
-        self._check_initialized()
-
-        if not data:
-            logger.info(f"No data to process for source: {source_type}")
-            return 0
-
-        # Convert data to documents
-        documents = self._prepare_documents(data, source_type)
-
-        # Get optimal chunking settings for this source type
-        chunk_size, chunk_overlap = self._get_optimal_chunk_settings(source_type)
-
-        # Split text into chunks with source-specific settings
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=["\n\n", "\n", ". ", " ", ""],
-        )
-        splits = text_splitter.split_documents(documents)
-
-        if not splits:
-            logger.warning(f"No text chunks generated for source: {source_type}")
-            return 0
-
-        logger.info(f"Generated {len(splits)} text chunks for source: {source_type}")
-
-        # Create embeddings for the splits
-        embeddings = self.embeddings.embed_documents([s.page_content for s in splits])
-
-        # Prepare data for Pinecone
-        pinecone_data = []
-        for i, (split, embedding) in enumerate(zip(splits, embeddings)):
-            # Clean metadata to ensure no null values that would cause Pinecone to reject
-            metadata = self._clean_metadata_for_pinecone(split.metadata.copy())
-
-            # Add the text to the metadata for retrieval
-            metadata["text"] = split.page_content
-            # Add chunk identifier
-            metadata["chunk_id"] = i
-            # Add source type for easier filtering
-            metadata["source_type"] = source_type
-
-            # Create a unique ID
-            vector_id = f"{source_type}-{namespace if namespace else uuid.uuid4()}-{i}"
-
-            pinecone_data.append(
-                {"id": vector_id, "values": embedding, "metadata": metadata}
-            )
-
-        # Upsert to Pinecone in batches
-        batch_size = 100
-        for i in range(0, len(pinecone_data), batch_size):
-            batch = pinecone_data[i : i + batch_size]
-            self.index.upsert(vectors=batch, namespace=namespace)
-
-        logger.info(
-            f"Stored {len(pinecone_data)} vector embeddings for source: {source_type}"
-        )
-        return len(pinecone_data)
-
-    def _clean_metadata_for_pinecone(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def clean_metadata_for_pinecone(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
         Clean metadata to ensure all values are compatible with Pinecone.
         Pinecone accepts strings, numbers, booleans, or lists of strings.
@@ -394,72 +247,3 @@ class VectorStorage:
                 cleaned[key] = str(value)
 
         return cleaned
-
-    def query(
-        self,
-        query_text: str,
-        top_k: int = 5,
-        namespace: Optional[str] = None,
-        filter_dict: Optional[Dict[str, Any]] = None,
-        source_types: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Query the vector store with advanced filtering options.
-
-        Args:
-            query_text: The query text
-            top_k: Number of top results to return
-            namespace: Optional namespace for the query
-            filter_dict: Optional filter for the query
-            source_types: Optional list of source types to filter by
-
-        Returns:
-            Query results from Pinecone
-        """
-        self._check_initialized()
-
-        # Create the query embedding
-        query_embedding = self.embeddings.embed_query(query_text)
-
-        # Apply source type filters if specified
-        if source_types and not filter_dict:
-            filter_dict = {"source_type": {"$in": source_types}}
-        elif source_types and filter_dict:
-            # Merge with existing filter
-            filter_dict = {
-                "$and": [filter_dict, {"source_type": {"$in": source_types}}]
-            }
-
-        # Query Pinecone
-        results = self.index.query(
-            vector=query_embedding,
-            top_k=top_k,
-            include_metadata=True,
-            namespace=namespace,
-            filter=filter_dict,
-        )
-
-        logger.info(
-            f"Retrieved {len(results.get('matches', []))} results for query: {query_text}"
-        )
-        return results
-
-    def delete_namespace(self, namespace: str) -> bool:
-        """
-        Delete a namespace from Pinecone.
-
-        Args:
-            namespace: Namespace to delete
-
-        Returns:
-            True if successful, False otherwise
-        """
-        self._check_initialized()
-
-        try:
-            self.index.delete(delete_all=True, namespace=namespace)
-            logger.info(f"Deleted namespace: {namespace}")
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting namespace {namespace}: {str(e)}")
-            return False

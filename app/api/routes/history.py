@@ -7,7 +7,7 @@ from app.api.models import (
     ResearchHistoryItem,
     ResearchResponse,
 )
-from app.services.research_agent import ResearchAgent
+from app.services.research.agent import ResearchAgent
 
 # Initialize services
 research_agent = ResearchAgent()
