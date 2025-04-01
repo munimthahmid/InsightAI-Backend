@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introduced research status tracking for monitoring ongoing research
 - Created template-based report generation system with customizable structures
 
+### Changed
+
+- Upgraded the language model from GPT-3.5-Turbo to GPT-4o for higher quality research reports
+- Enhanced the URL extraction and preservation in references for better citation quality
+- Improved context formatting to present document sources more clearly to the language model
+- Enhanced prompt templates to encourage more diverse citation usage across all sources
+- Modified the references section format to group by source type for better organization
+- Added enhanced debugging logs to track source data and URL availability
+
+### Fixed
+
+- Fixed issue with URLs not appearing in the References section even when they exist in source data
+- Fixed problem with report generation over-relying on a single source for citations
+- Improved document processor to better preserve URL information when chunking documents
+
 ## [2.0.0] - 2023-TBD
 
 ### Added

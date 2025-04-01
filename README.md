@@ -17,7 +17,7 @@ The backend system for the Autonomous AI Research Agent, a powerful AI-driven re
 ## Technology Stack
 
 - **Framework**: FastAPI
-- **Language Model**: OpenAI GPT models
+- **Language Model**: OpenAI GPT-4o
 - **Vector Database**: Pinecone
 - **Async Processing**: Python asyncio
 - **Documentation**: Pydantic models with auto-generated OpenAPI docs
@@ -132,7 +132,9 @@ The research module is the heart of the system, consisting of:
 
 - **ResearchAgent**: Orchestrates the research process
 - **ResearchHistoryManager**: Manages storage and retrieval of research
-- **ReportGenerator**: Creates well-structured reports with citations
+- **ReportGenerator**: Creates well-structured reports with enhanced citations and URL references
+- **Document Processor**: Ensures proper metadata preservation, including URLs for citations
+- **Citation Enhancement**: Groups references by source type and ensures proper URL inclusion
 
 ### Adding New Data Sources
 

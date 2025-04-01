@@ -86,3 +86,21 @@
   - Verify that all data sources are properly configured and accessible
   - Check for rate limiting on external APIs
   - Implement a citation verification step in the research process
+
+### Missing URLs in References
+
+- **Issue**: References showing "Source document" entries without URLs
+- **Solution**:
+  - Ensure the system is using the latest version with the URL extraction enhancements
+  - Check that data sources are properly returning URL metadata
+  - Verify that the `enhance_report_with_citations` method is correctly processing the URLs
+  - Review logs to identify which source types may be missing URL information
+
+### Citation Diversity
+
+- **Issue**: Research reports over-relying on a single source for citations
+- **Solution**:
+  - Make sure you're using GPT-4o as the language model (set in `backend/app/services/research/report.py`)
+  - Check that the prompt templates include instructions for diverse citation usage
+  - Try increasing the number of results per source to provide more diverse material
+  - Consider using research templates that encourage multi-perspective analysis

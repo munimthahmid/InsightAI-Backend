@@ -28,7 +28,10 @@ The system employs a sophisticated Retrieval-Augmented Generation (RAG) architec
 - **Contextual Citations**: All generated content includes traceable citations to source material
 - **Evidence Tracing**: Claims in reports can be directly verified against source documents
 - **Contradiction Detection**: The system identifies and presents conflicting information
-- **Enhanced Citations**: Reports include properly formatted references with source links
+- **Enhanced Citations**: Reports include properly formatted references with source URLs
+- **Source Diversity**: Ensures research reports utilize a wide variety of sources
+- **Reference Organization**: Citations are grouped by source type for better readability
+- **URL Preservation**: Robust URL extraction and preservation for all referenced sources
 
 ### Research Specialization
 
@@ -66,10 +69,11 @@ The system is designed with scalability and performance in mind:
 
 - **Backend**: FastAPI-based Python service with robust asynchronous processing
 - **Data Storage**: Vector database for semantic search and efficient information retrieval
-- **NLP Engine**: Powered by state-of-the-art language models from OpenAI
+- **NLP Engine**: Powered by OpenAI's GPT-4o for high-quality research reports and contextual understanding
 - **Frontend**: React-based UI with Chakra UI components for an intuitive user experience
 - **Notification**: Pluggable notification system supporting multiple delivery methods
 - **Research Module**: Modular architecture with specialized components for research orchestration
+- **Citation System**: Enhanced reference handling with source grouping and URL preservation
 
 ## Ideal Use Cases
 
