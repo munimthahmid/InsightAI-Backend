@@ -412,11 +412,50 @@ class ResearchAgent:
             )
 
             # Step 5: Search for relevant documents using the query
-            relevant_docs = self.vector_storage.query(
-                query_text=query,
-                top_k=25,  # Get top 25 results for report generation
-                namespace=vector_namespace,
-            )
+            # Use clustering-enhanced query if enough documents
+            try:
+                if hasattr(self.vector_storage, "query_with_clustering"):
+                    logger.info("Using clustering-enhanced retrieval")
+                    relevant_docs = self.vector_storage.query_with_clustering(
+                        query_text=query,
+                        top_k=25,  # Get top 25 results for report generation
+                        namespace=vector_namespace,
+                        cluster_method="kmeans",
+                        num_clusters=5,
+                        diversity_weight=0.3,
+                    )
+                    # Check if clustering worked
+                    if "cluster_stats" in relevant_docs:
+                        logger.info(
+                            f"Successfully clustered into {relevant_docs.get('num_clusters', 0)} clusters"
+                        )
+                    else:
+                        # Fall back to standard query if needed
+                        logger.warning(
+                            "Clustering failed, falling back to standard retrieval"
+                        )
+                        relevant_docs = self.vector_storage.query(
+                            query_text=query,
+                            top_k=25,
+                            namespace=vector_namespace,
+                        )
+                else:
+                    logger.info(
+                        "Vector storage does not support clustering, using standard retrieval"
+                    )
+                    relevant_docs = self.vector_storage.query(
+                        query_text=query,
+                        top_k=25,
+                        namespace=vector_namespace,
+                    )
+            except Exception as e:
+                logger.warning(f"Error during cluster-enhanced retrieval: {str(e)}")
+                # Fall back to standard query
+                relevant_docs = self.vector_storage.query(
+                    query_text=query,
+                    top_k=25,
+                    namespace=vector_namespace,
+                )
 
             logger.info(
                 f"Query returned {len(relevant_docs.get('matches', []))} matches from namespace {vector_namespace}"
@@ -473,6 +512,11 @@ class ResearchAgent:
                 "relevant_docs": relevant_docs,
                 "sources": sources_dict,
             }
+
+            # Add clustering info if available
+            if "cluster_stats" in relevant_docs:
+                research_result["cluster_stats"] = relevant_docs["cluster_stats"]
+                research_result["num_clusters"] = relevant_docs.get("num_clusters", 0)
 
             # Save to history
             await self.history_manager.save_research(research_result)

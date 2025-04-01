@@ -8,10 +8,13 @@ The backend system for the Autonomous AI Research Agent, a powerful AI-driven re
 
 - **Multi-Source Research**: Collect data from ArXiv, News APIs, GitHub, Wikipedia, and Semantic Scholar
 - **Advanced RAG Implementation**: Semantic search and contextual information retrieval
+- **Multi-Agent System**: Specialized agents for acquisition, analysis, synthesis, and critique
+- **Advanced Vector Clustering**: Document organization using K-means and HDBSCAN algorithms
+- **Advanced Error Handling**: Robust fallback mechanisms and recovery for common failure modes
 - **Research History Management**: Save and retrieve past research sessions
 - **Template-Based Research**: Domain-specific templates for focused research
 - **Literature Review Generation**: Create formal academic literature reviews
-- **Citation Enhancement**: Properly formatted citations and references
+- **Citation Enhancement**: Properly formatted citations and references with clickable links
 - **Asynchronous Processing**: Non-blocking operations for efficient resource usage
 
 ## Technology Stack
@@ -34,8 +37,11 @@ backend/
 │   └── services/            # Business logic
 │       ├── data_sources/    # External data source integrations
 │       ├── research/        # Research orchestration module
+│       │   ├── agents/      # Multi-agent system components
+│       │   └── orchestration/ # Agent orchestration tools
 │       ├── templates/       # Research template management
 │       ├── vector_db/       # Vector database operations
+│       │   └── clustering/  # Vector clustering algorithms
 │       └── notification/    # Notification delivery system
 ├── docs/                    # Documentation
 └── requirements.txt         # Python dependencies

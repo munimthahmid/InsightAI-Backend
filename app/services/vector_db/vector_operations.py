@@ -5,10 +5,16 @@ Handles embedding, storing, and querying vector data.
 
 import uuid
 import time
-from typing import List, Dict, Any, Optional
+import numpy as np
+from typing import List, Dict, Any, Optional, Tuple, Union
 from loguru import logger
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Import clustering components
+from app.services.vector_db.clustering.kmeans import KMeansClustering
+from app.services.vector_db.clustering.hdbscan_cluster import HDBSCANClustering
+from app.services.vector_db.clustering.mmr import MaximumMarginalRelevance
 
 
 class VectorOperations:
@@ -27,6 +33,16 @@ class VectorOperations:
         self.index = index
         self.document_preparation = document_preparation
         self.initialized = False if embeddings is None or index is None else True
+
+        # Initialize clustering components
+        self.kmeans_clustering = KMeansClustering()
+        self.hdbscan_clustering = HDBSCANClustering()
+        self.mmr = MaximumMarginalRelevance()
+
+        # Default cluster settings
+        self.default_cluster_method = "kmeans"
+        self.default_diversity_weight = 0.3
+        self.default_num_clusters = 5
 
     def process_and_store(
         self,

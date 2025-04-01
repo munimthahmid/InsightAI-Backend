@@ -61,6 +61,16 @@
   - Check if the embeddings service is functioning correctly
   - Verify that documents are being properly indexed
   - Consider reindexing your vector database
+  - The system now automatically generates embeddings if they're not found in the documents
+
+### Missing Vector Embeddings Warning
+
+- **Issue**: System logs show "No document vectors found, generating placeholder vectors for testing"
+- **Solution**:
+  - This is now handled automatically with the embedding generation enhancement
+  - The AnalysisAgent will attempt to generate embeddings if they're not found in the documents
+  - If embeddings still can't be generated, the system creates placeholders for testing purposes
+  - No action required, but you can check the LOG_LEVEL to reduce warning messages
 
 ### "Retrieved 0 results" Issue
 
@@ -93,6 +103,16 @@
   - Try using more specific queries
   - Consider implementing custom research workflows for specific domains
 
+### JSON Parsing Errors in Analysis
+
+- **Issue**: Analysis may fail with JSON parsing errors or invalid format specifiers in LLM responses
+- **Solution**:
+  - This is now fixed with enhanced JSON parsing and error handling in all analysis methods
+  - The system properly escapes JSON format examples in prompts to prevent format string errors
+  - LLM responses are now cleaned to handle markdown code blocks and other formatting issues
+  - Each analysis component has fallback generation to ensure some result even if parsing fails
+  - If the issue persists, check the logs for specific error messages and which component is failing
+
 ### Citation or Source Issues
 
 - **Issue**: Missing or incorrect citations in research reports
@@ -105,10 +125,22 @@
 
 - **Issue**: References showing "Source document" entries without URLs
 - **Solution**:
-  - Ensure the system is using the latest version with the URL extraction enhancements
-  - Check that data sources are properly returning URL metadata
-  - Verify that the `enhance_report_with_citations` method is correctly processing the URLs
-  - Review logs to identify which source types may be missing URL information
+  - This issue has been fixed with enhanced URL handling in the synthesis agent
+  - The system now extracts URLs from multiple locations in document metadata
+  - References now include proper markdown links for clickable URLs
+  - "Document X" style references are automatically converted to numbered citations
+  - The system adds additional metadata like authors and publication date when URLs aren't available
+  - If URLs are still missing, verify that data source integrations are returning proper URL metadata
+
+### Generic Document References
+
+- **Issue**: Report mentions "Document 1", "Document 2" instead of using proper citation numbers
+- **Solution**:
+  - This issue has been fixed with improved citation handling
+  - The synthesis agent now automatically converts "Document X" references to numbered citations
+  - Prompts have been updated to guide the LLM to use proper citation format from the beginning
+  - Various reference patterns are detected and converted, including "Documents X and Y" patterns
+  - If the issue persists, try regenerating the report or check if the research templates need updating
 
 ### Citation Diversity
 
