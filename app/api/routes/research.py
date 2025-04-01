@@ -38,6 +38,7 @@ async def conduct_research(request: ResearchRequest):
         )
 
         logger.info(f"Research completed for topic: {request.query}")
+        print(result)
         return result
     except Exception as e:
         logger.error(f"Error conducting research: {str(e)}")
@@ -53,15 +54,21 @@ async def conduct_templated_research(request: ResearchTemplateRequest):
     """
     try:
         # Get the template
+        logger.info(f"Looking for template with ID: {request.template_id}")
+        available_templates = template_manager.get_all_templates()
+        logger.info(f"Available templates: {[t.id for t in available_templates]}")
+
         template = template_manager.get_template(request.template_id)
+
         if not template:
+            logger.error(f"Template not found with ID: {request.template_id}")
             raise HTTPException(
                 status_code=404,
                 detail=f"Template with ID {request.template_id} not found",
             )
 
         logger.info(
-            f"Conducting templated research on topic: {request.query} using template: {template.name}"
+            f"Conducting templated research on topic: {request.query} using template: {template.name} (ID: {template.id})"
         )
 
         # Conduct research with template
