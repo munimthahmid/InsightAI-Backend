@@ -76,7 +76,7 @@ class LiteratureReviewResponse(BaseModel):
 
 
 class TemplateResponse(BaseModel):
-    template_id: str
+    id: str
     name: str
     description: str
     domain: str

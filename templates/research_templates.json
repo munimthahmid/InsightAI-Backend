@@ -1,137 +1,144 @@
 [
   {
-    "id": "cfd2dc89-4b03-4bfe-a182-f6184853e9d1",
-    "name": "Standard Research Report",
-    "description": "A comprehensive general-purpose research report template",
-    "prompt_template": "You are researching the topic: {query}. Create a comprehensive research report that analyzes the provided information.",
+    "template_id": "academic-review",
+    "name": "Academic Literature Review",
+    "description": "Comprehensive literature review with academic focus, methodological analysis, and gap identification",
+    "domain": "Academic",
+    "focus_areas": [
+      "Literature Review",
+      "Gap Analysis",
+      "Methodology Assessment"
+    ],
     "report_structure": [
       {
         "section": "Introduction",
-        "description": "Overview of the topic and research questions",
-        "required": true
+        "description": "Overview of the research topic and its importance"
       },
       {
         "section": "Methodology",
-        "description": "Approach used for the research",
-        "required": true
+        "description": "Approach used for literature selection and review"
       },
       {
-        "section": "Findings",
-        "description": "Main results of the research",
-        "required": true
+        "section": "Literature Review",
+        "description": "Detailed analysis of relevant papers and studies"
       },
       {
-        "section": "Analysis",
-        "description": "Interpretation of the findings",
-        "required": true
-      },
-      {
-        "section": "Conclusion",
-        "description": "Summary of key points and recommendations",
-        "required": true
-      }
-    ],
-    "created_at": "2025-04-01T10:56:20.099076",
-    "updated_at": null,
-    "created_by": null,
-    "is_default": true,
-    "tags": [
-      "general",
-      "standard"
-    ]
-  },
-  {
-    "id": "c3315e91-f2f3-43e6-982b-6a7040e58e5f",
-    "name": "Technical Deep Dive",
-    "description": "A technical analysis focused on implementation details",
-    "prompt_template": "You are a technical expert analyzing: {query}. Create a detailed technical report examining implementation, architecture, and technical considerations of this topic.",
-    "report_structure": [
-      {
-        "section": "Technical Overview",
-        "description": "High-level technical description",
-        "required": true
-      },
-      {
-        "section": "Architecture",
-        "description": "System architecture and components",
-        "required": true
-      },
-      {
-        "section": "Implementation Details",
-        "description": "Specific implementation approaches",
-        "required": true
-      },
-      {
-        "section": "Performance Considerations",
-        "description": "Analysis of performance aspects",
-        "required": true
-      },
-      {
-        "section": "Trade-offs",
-        "description": "Technical trade-offs and design decisions",
-        "required": true
+        "section": "Gaps and Opportunities",
+        "description": "Identification of research gaps"
       },
       {
         "section": "Future Directions",
-        "description": "Potential technical improvements and research",
-        "required": true
+        "description": "Suggestions for future research"
+      },
+      {
+        "section": "References",
+        "description": "List of all sources in proper academic format"
       }
     ],
-    "created_at": "2025-04-01T10:56:20.099076",
-    "updated_at": null,
-    "created_by": null,
-    "is_default": true,
-    "tags": [
-      "technical",
-      "implementation",
-      "deep-dive"
+    "prompt_template": "\n            You are an academic researcher writing a comprehensive literature review.\n            \n            Research Topic: \"{query}\"\n            \n            Create a detailed academic literature review that:\n            1. Introduces the topic and its significance\n            2. Explains your methodology for selecting and reviewing literature\n            3. Thoroughly analyzes the current state of research on this topic\n            4. Identifies gaps in the existing literature\n            5. Suggests directions for future research\n            6. Includes a properly formatted reference list\n            \n            Use an academic tone and structure throughout the report.\n            ",
+    "default_sources": [
+      "arxiv",
+      "news",
+      "github",
+      "wikipedia"
     ]
   },
   {
-    "id": "6f030197-22f8-4d69-9cf0-121c381a92bf",
-    "name": "Trend Analysis",
-    "description": "Analysis of current trends and future directions",
-    "prompt_template": "You are analyzing trends related to: {query}. Create a report that identifies current trends, historical context, and makes predictions about future developments.",
+    "template_id": "market-analysis",
+    "name": "Market Analysis Report",
+    "description": "Comprehensive market analysis with trends, competitors, opportunities, and recommendations",
+    "domain": "Business",
+    "focus_areas": [
+      "Market Trends",
+      "Competitive Analysis",
+      "SWOT Analysis",
+      "Strategic Recommendations"
+    ],
     "report_structure": [
       {
         "section": "Executive Summary",
-        "description": "Brief overview of key trends",
-        "required": true
+        "description": "Brief overview of key findings and recommendations"
       },
       {
-        "section": "Historical Context",
-        "description": "How the trend has evolved over time",
-        "required": true
+        "section": "Market Overview",
+        "description": "Current state and size of the market"
       },
       {
-        "section": "Current Landscape",
-        "description": "Analysis of present state",
-        "required": true
+        "section": "Key Trends",
+        "description": "Analysis of emerging and current market trends"
       },
       {
-        "section": "Key Players",
-        "description": "Important organizations and individuals",
-        "required": true
+        "section": "Competitive Landscape",
+        "description": "Analysis of key competitors and market players"
       },
       {
-        "section": "Future Projections",
-        "description": "Predictions for future developments",
-        "required": true
+        "section": "Opportunities & Threats",
+        "description": "SWOT analysis focusing on market opportunities"
       },
       {
-        "section": "Strategic Implications",
-        "description": "What these trends mean for stakeholders",
-        "required": true
+        "section": "Strategic Recommendations",
+        "description": "Actionable recommendations based on findings"
+      },
+      {
+        "section": "Sources",
+        "description": "List of data sources and references"
       }
     ],
-    "created_at": "2025-04-01T10:56:20.099076",
-    "updated_at": null,
-    "created_by": null,
-    "is_default": true,
-    "tags": [
-      "trends",
-      "forecasting",
-      "analysis"
+    "prompt_template": "\n            You are a market analyst creating a comprehensive market research report.\n            \n            Market/Industry: \"{query}\"\n            \n            Create a detailed market analysis that:\n            1. Provides a concise executive summary of key findings\n            2. Analyzes the current market size, growth, and overall landscape\n            3. Identifies and explains key market trends and drivers\n            4. Examines the competitive landscape and key players\n            5. Conducts a brief SWOT analysis focusing on market opportunities\n            6. Offers strategic, actionable recommendations\n            \n            Use a professional business tone with concrete data points when available.\n            ",
+    "default_sources": [
+      "arxiv",
+      "news",
+      "github",
+      "wikipedia"
+    ]
+  },
+  {
+    "template_id": "tech-assessment",
+    "name": "Technology Assessment Report",
+    "description": "Technical analysis of emerging technologies, their applications, maturity, and implementation considerations",
+    "domain": "Technology",
+    "focus_areas": [
+      "Technical Analysis",
+      "Implementation Assessment",
+      "Risk Evaluation",
+      "Future Projections"
+    ],
+    "report_structure": [
+      {
+        "section": "Technology Overview",
+        "description": "Introduction to the technology and its core concepts"
+      },
+      {
+        "section": "Current State",
+        "description": "Analysis of the technology's current development and adoption"
+      },
+      {
+        "section": "Use Cases",
+        "description": "Practical applications and implementation examples"
+      },
+      {
+        "section": "Technical Assessment",
+        "description": "Evaluation of capabilities, limitations, and architecture"
+      },
+      {
+        "section": "Implementation Considerations",
+        "description": "Practical aspects of adoption and integration"
+      },
+      {
+        "section": "Future Development",
+        "description": "Projected evolution and roadmap"
+      },
+      {
+        "section": "References",
+        "description": "Technical resources and sources"
+      }
+    ],
+    "prompt_template": "\n            You are a technology analyst evaluating an emerging or established technology.\n            \n            Technology: \"{query}\"\n            \n            Create a comprehensive technology assessment that:\n            1. Explains the technology and its core concepts in clear terms\n            2. Analyzes the current state of development and market adoption\n            3. Explores practical use cases and implementation examples\n            4. Provides a technical assessment of capabilities and limitations\n            5. Discusses implementation considerations and challenges\n            6. Projects future developments and potential impact\n            \n            Balance technical accuracy with accessibility, providing enough detail for technical audiences while keeping the report understandable.\n            ",
+    "default_sources": [
+      "arxiv",
+      "news",
+      "github",
+      "wikipedia"
     ]
   }
 ]
