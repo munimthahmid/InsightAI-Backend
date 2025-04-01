@@ -55,47 +55,60 @@ class BaseAgent(ABC):
         """
         pass
 
-    async def log_activity(self, activity: str, details: Dict[str, Any]) -> None:
+    async def log_activity(
+        self, activity_type: str, details: Dict[str, Any] = None
+    ) -> None:
         """
         Log agent activity to the context manager for tracking.
 
         Args:
-            activity: Description of the activity
+            activity_type: Description of the activity
             details: Additional details about the activity
         """
         if self.context_manager:
+            if details is None:
+                details = {}
             await self.context_manager.log_agent_activity(
                 agent_id=self.agent_id,
                 agent_type=self.agent_type,
-                activity=activity,
+                activity=activity_type,
                 details=details,
             )
+            logger.debug(
+                f"Agent activity logged: {activity_type} by {self.agent_type} agent {self.agent_id}"
+            )
         else:
-            logger.debug(f"Agent {self.agent_id} ({self.agent_type}): {activity}")
+            logger.debug(
+                f"No context manager available to log: {activity_type} by {self.agent_type} agent {self.agent_id}"
+            )
 
     async def get_context(self, key: str) -> Any:
         """
-        Get data from the shared research context.
+        Get a value from the shared context.
 
         Args:
-            key: The key for the data to retrieve
+            key: The key to retrieve
 
         Returns:
-            The data stored under the key, or None if not found
+            The value associated with the key, or None if not found
         """
         if self.context_manager:
+            logger.debug(f"Getting context key '{key}' for agent {self.agent_id}")
             return await self.context_manager.get(key)
-        return None
+        else:
+            logger.debug(f"No context manager available for context retrieval: {key}")
+            return None
 
     async def set_context(self, key: str, value: Any) -> None:
         """
-        Store data in the shared research context.
+        Set a value in the shared context.
 
         Args:
-            key: The key to store the data under
-            value: The data to store
+            key: The key to set
+            value: The value to store
         """
         if self.context_manager:
+            logger.debug(f"Setting context key '{key}' for agent {self.agent_id}")
             # Ensure the value is serializable
             try:
                 serializable_value = self._make_serializable(value)
@@ -106,6 +119,8 @@ class BaseAgent(ABC):
                     f"Failed to store non-serializable data for key {key}: {str(e)}",
                     self.agent_type,
                 )
+        else:
+            logger.debug(f"No context manager available for context setting: {key}")
 
     def _make_serializable(self, obj: Any) -> Any:
         """

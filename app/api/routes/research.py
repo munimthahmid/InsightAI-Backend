@@ -38,7 +38,7 @@ async def conduct_research(request: ResearchRequest):
         )
 
         logger.info(f"Research completed for topic: {request.query}")
-        print(result)
+        # print(result)
         return result
     except Exception as e:
         logger.error(f"Error conducting research: {str(e)}")

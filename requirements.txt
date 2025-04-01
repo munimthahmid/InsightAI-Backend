@@ -16,4 +16,5 @@ loguru
 pydantic_settings
 redis
 email-validator
-scikit-learn
+scikit-learn>=1.0.0
+hdbscan>=0.8.29; platform_system != "Windows"  # Optional, will fall back to sklearn if not available

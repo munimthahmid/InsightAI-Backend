@@ -729,3 +729,169 @@ No relevant documents were found for this query. This could be due to:
         except Exception as e:
             logger.error(f"Error generating literature review: {str(e)}")
             return f"Error generating literature review: {str(e)}"
+
+    async def generate_cluster_report(
+        self,
+        query: str,
+        relevant_docs: Dict[str, Any],
+        template_id: Optional[str] = None,
+    ) -> str:
+        """
+        Generate a report using clustered document data.
+
+        This method takes advantage of the document clustering to produce
+        a more organized, comprehensive report that addresses different
+        aspects or perspectives of the research topic.
+
+        Args:
+            query: The research query
+            relevant_docs: Relevant documents from vector search with clustering information
+            template_id: Optional template ID to use for structure (not yet implemented)
+
+        Returns:
+            Generated research report with cluster-aware organization
+        """
+        # Verify that we have clustered data
+        if "cluster_stats" not in relevant_docs:
+            logger.warning(
+                "Cluster stats not found in results, falling back to standard report"
+            )
+            return await self.generate_standard_report(query, relevant_docs)
+
+        # Get matches and cluster information
+        matches = relevant_docs.get("matches", [])
+        num_clusters = relevant_docs.get("num_clusters", 0)
+        cluster_stats = relevant_docs.get("cluster_stats", {})
+
+        if not matches or num_clusters == 0:
+            logger.warning(
+                "No matches or clusters found, falling back to standard report"
+            )
+            return await self.generate_standard_report(query, relevant_docs)
+
+        logger.info(f"Generating cluster-based report with {num_clusters} clusters")
+
+        # Organize documents by cluster
+        clustered_docs = {}
+
+        # First pass to identify cluster labels
+        for doc in matches:
+            cluster = doc.get("cluster", -1)
+            if cluster == -1:
+                # If document doesn't have a cluster label, try to determine from metadata
+                metadata = doc.get("metadata", {})
+                cluster = metadata.get("cluster", -1)
+
+            if cluster not in clustered_docs:
+                clustered_docs[cluster] = []
+            clustered_docs[cluster].append(doc)
+
+        # If clustering wasn't preserved in the documents, try to cluster them now
+        if len(clustered_docs) <= 1:
+            logger.warning(
+                "Documents don't have cluster labels, treating as a single cluster"
+            )
+            clustered_docs = {0: matches}
+
+        # Now create a prompt that leverages the cluster information
+        prompt_parts = [
+            f"# Research for query: {query}",
+            f"\nThe documents have been organized into {len(clustered_docs)} different thematic clusters.",
+            "\n## Clusters Overview:\n",
+        ]
+
+        # Add cluster statistics
+        for cluster_id, docs in clustered_docs.items():
+            prompt_parts.append(f"- Cluster {cluster_id}: {len(docs)} documents")
+
+        # For each cluster, prepare document context
+        for cluster_id, docs in clustered_docs.items():
+            prompt_parts.append(f"\n\n## DOCUMENTS FROM CLUSTER {cluster_id}\n")
+
+            # Add context from this cluster's documents
+            for i, doc in enumerate(docs):
+                metadata = doc.get("metadata", {})
+                content = metadata.get("text", "")
+                score = doc.get("score", 0)
+
+                # Get source information
+                source_type = metadata.get("source_type", "unknown")
+                source_title = get_source_title(doc)
+                source_url = metadata.get("url", "")
+
+                # Format document header
+                doc_header = (
+                    f"DOCUMENT {i+1} (CLUSTER {cluster_id}) [{source_type.upper()}]"
+                )
+                if source_title:
+                    doc_header += f": {source_title}"
+
+                if source_url:
+                    doc_header += f"\nURL: {source_url}"
+
+                # Format content
+                formatted_content = (
+                    f"{doc_header}\n"
+                    f"RELEVANCE: {score:.4f}\n"
+                    f"SOURCE TYPE: {source_type}\n"
+                    f"CONTENT:\n{content}\n"
+                )
+
+                # Add separator
+                separator = "=" * 40
+                formatted_content = f"{separator}\n{formatted_content}\n{separator}"
+
+                prompt_parts.append(formatted_content)
+
+        # Create the full context
+        full_context = "\n\n".join(prompt_parts)
+
+        # Create cluster-aware prompt template
+        cluster_prompt_template = """
+        You are an advanced research assistant that creates comprehensive cluster-based research reports.
+        The documents provided have been automatically clustered by semantic similarity into distinct thematic groups.
+        
+        RESEARCH QUERY: {query}
+        
+        CLUSTERED DOCUMENTS:
+        {context}
+        
+        Create a comprehensive research report that takes advantage of this thematic clustering. Your report should:
+        
+        1. Include an introduction explaining the query and the major themes discovered
+        2. Organize the report into SEPARATE SECTIONS FOR EACH CLUSTER, with each section covering the theme/perspective of that cluster
+        3. For each cluster section:
+           - Identify the main theme or perspective represented by this cluster
+           - Summarize the key information and insights from the documents in this cluster
+           - Include specific data, examples, and evidence with proper citations
+           - Note any relationships to other clusters/themes
+        4. After covering all clusters, include a synthesis section that connects the different themes
+        5. End with a conclusion that answers the research query comprehensively
+        
+        FORMAT REQUIREMENTS:
+        - Use Markdown formatting with clear hierarchical structure
+        - Include citations to specific documents in the format [Cluster X, Document Y]
+        - Each section should represent a coherent theme from one cluster
+        - Include a "Synthesis and Integration" section that connects insights across clusters
+        - End with a comprehensive References section organized by cluster
+        - IMPORTANT: Balance coverage across all clusters, don't focus only on one cluster
+        
+        YOUR REPORT:
+        """
+
+        # Create the LLM chain
+        prompt = ChatPromptTemplate.from_template(cluster_prompt_template)
+        chain = LLMChain(llm=self.llm, prompt=prompt)
+
+        # Run the chain
+        try:
+            response = await chain.arun(query=query, context=full_context)
+            logger.info(
+                f"Generated cluster-based report for query: {query} with {num_clusters} clusters"
+            )
+            return response.strip()
+        except Exception as e:
+            logger.error(f"Error generating cluster-based report: {str(e)}")
+            # Fall back to standard report
+            logger.info("Falling back to standard report after cluster report failure")
+            return await self.generate_standard_report(query, relevant_docs)
